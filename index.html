@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>श्री बालाजी डेकोरेशन</title>
+
+<style>
+body {
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f5f5f5;
+  color:#222;
+}
+header {
+  background:#9c174f;
+  color:white;
+  padding:18px;
+  text-align:center;
+}
+.container {padding:15px;max-width:650px;margin:auto}
+.card {
+  background:white;
+  padding:15px;
+  margin:12px 0;
+  border-radius:12px;
+  box-shadow:0 2px 8px #ddd;
+}
+input,button,select {
+  width:100%;
+  padding:12px;
+  margin:7px 0;
+  box-sizing:border-box;
+  border-radius:7px;
+  border:1px solid #ccc;
+  font-size:16px;
+}
+button {
+  background:#9c174f;
+  color:white;
+  border:0;
+  cursor:pointer;
+}
+nav {
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+}
+nav button {width:auto;flex:1;font-size:13px}
+.hidden {display:none}
+.amount {font-size:23px;color:#9c174f;font-weight:bold}
+.small {font-size:13px;color:#666}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>श्री बालाजी डेकोरेशन</h2>
+<p>Decoration | Light Decoration | Catering</p>
+</header>
+
+<div class="container">
+
+<div id="login" class="card">
+<h3>Admin Login</h3>
+<input id="email" type="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="loginUser()">Login करा</button>
+<p id="loginMsg"></p>
+</div>
+
+<div id="app" class="hidden">
+
+<nav>
+<button onclick="showPage('dashboard')">Dashboard</button>
+<button onclick="showPage('booking')">नवीन बुकिंग</button>
+<button onclick="showPage('list')">बुकिंग लिस्ट</button>
+<button onclick="showPage('expense')">खर्च</button>
+<button onclick="showPage('accounts')">हिशोब</button>
+</nav>
+
+<div id="dashboard" class="page">
+<div class="card">
+<h3>Dashboard</h3>
+<p>एकूण बुकिंग</p>
+<div class="amount" id="totalBookings">0</div>
+<p>एकूण जमा रक्कम</p>
+<div class="amount" id="totalPaid">₹0</div>
+<p>येणे बाकी</p>
+<div class="amount" id="totalPending">₹0</div>
+<p>एकूण खर्च</p>
+<div class="amount" id="totalExpenses">₹0</div>
+</div>
+</div>
+
+<div id="booking" class="page hidden">
+<div class="card">
+<h3>नवीन बुकिंग</h3>
+
+<input id="customer" placeholder="ग्राहकाचे नाव">
+<input id="phone" placeholder="मोबाईल नंबर">
+<input id="event" placeholder="कार्यक्रमाचे नाव">
+<input id="date" type="date">
+<input id="location" placeholder="कार्यक्रमाचे ठिकाण">
+<input id="details" placeholder="डेकोरेशनची माहिती">
+<input id="total" type="number" placeholder="एकूण रक्कम">
+<input id="paid" type="number" placeholder="जमा रक्कम">
+
+<button onclick="saveBooking()">बुकिंग सेव्ह करा</button>
+<button onclick="clearForm()" style="background:#666">नवीन फॉर्म</button>
+</div>
+</div>
+
+<div id="list" class="page hidden">
+<div class="card">
+<h3>बुकिंग लिस्ट</h3>
+<div id="bookingList">लोड होत आहे...</div>
+</div>
+</div>
+
+<div id="expense" class="page hidden">
+<div class="card">
+<h3>नवीन खर्च</h3>
+<input id="expenseName" placeholder="खर्चाचे कारण">
+<input id="expenseAmount" type="number" placeholder="खर्चाची रक्कम">
+<input id="expenseDate" type="date">
+<button onclick="saveExpense()">खर्च सेव्ह करा</button>
+</div>
+<div class="card">
+<h3>खर्चाची यादी</h3>
+<div id="expenseList"></div>
+</div>
+</div>
+
+<div id="accounts" class="page hidden">
+<div class="card">
+<h3>एकूण हिशोब</h3>
+<p>एकूण जमा: <b id="accountPaid">₹0</b></p>
+<p>एकूण येणे: <b id="accountPending">₹0</b></p>
+<p>एकूण खर्च: <b id="accountExpense">₹0</b></p>
+<hr>
+<p>जमा - खर्च</p>
+<div class="amount" id="netAmount">₹0</div>
+</div>
+</div>
+
+<button onclick="logoutUser()" style="background:#555">Logout</button>
+
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+
+import {
+getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+import {
+getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyAlf0vBXoGtt05BzmBjv2dyRp5wo_Ju-sM",
+authDomain: "shree-balaji-decoration.firebaseapp.com",
+projectId: "shree-balaji-decoration",
+storageBucket: "shree-balaji-decoration.firebasestorage.app",
+messagingSenderId: "176281617028",
+appId: "1:176281617028:web:875eccd24027989a33b8d1"
+};
+
+const appFirebase = initializeApp(firebaseConfig);
+const auth = getAuth(appFirebase);
+const db = getFirestore(appFirebase);
+
+let bookings = [];
+let expenses = [];
+let editingId = null;
+
+window.loginUser = async function() {
+try {
+await signInWithEmailAndPassword(
+auth,
+document.getElementById("email").value,
+document.getElementById("password").value
+);
+} catch(error) {
+document.getElementById("loginMsg").innerText = "Login चुकीचे आहे. पुन्हा प्रयत्न करा.";
+}
+};
+
+window.logoutUser = function() {
+signOut(auth);
+};
+
+onAuthStateChanged(auth, async user => {
+if(user) {
+document.getElementById("login").classList.add("hidden");
+document.getElementById("app").classList.remove("hidden");
+await loadData();
+} else {
+document.getElementById("login").classList.remove("hidden");
+document.getElementById("app").classList.add("hidden");
+}
+});
+
+window.showPage = function(page) {
+document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
+document.getElementById(page).classList.remove("hidden");
+};
+
+window.clearForm = function() {
+editingId = null;
+["customer","phone","event","date","location","details","total","paid"]
+.forEach(id => document.getElementById(id).value = "");
+};
+
+window.saveBooking = async function() {
+const data = {
+customer: customer.value,
+phone: phone.value,
+event: event.value,
+date: date.value,
+location: location.value,
+details: details.value,
+total: Number(total.value || 0),
+paid: Number(paid.value || 0)
+};
+
+if(!data.customer || !data.phone) {
+alert("ग्राहकाचे नाव आणि मोबाईल नंबर भरा.");
+return;
+}
+
+try {
+if(editingId) {
+await updateDoc(doc(db,"bookings",editingId),data);
+alert("बुकिंग अपडेट झाले.");
+} else {
+await addDoc(collection(db,"bookings"),data);
+alert("बुकिंग सेव्ह झाले.");
+}
+clearForm();
+await loadData();
+showPage("list");
+} catch(error) {
+alert("सेव्ह करताना त्रुटी आली.");
+}
+};
+
+async function loadData() {
+const b = await getDocs(collection(db,"bookings"));
+bookings = b.docs.map(d => ({id:d.id,...d.data()}));
+
+const e = await getDocs(collection(db,"expenses"));
+expenses = e.docs.map(d => ({id:d.id,...d.data()}));
+
+renderData();
+}
+
+function renderData() {
+let totalPaid = 0, pending = 0, totalExpense = 0;
+
+bookings.forEach(b => {
+totalPaid += Number(b.paid || 0);
+pending += Number(b.total || 0) - Number(b.paid || 0);
+});
+
+expenses.forEach(e => totalExpense += Number(e.amount || 0));
+
+document.getElementById("totalBookings").innerText = bookings.length;
+document.getElementById("totalPaid").innerText = "₹"+totalPaid;
+document.getElementById("totalPending").innerText = "₹"+pending;
+document.getElementById("totalExpenses").innerText = "₹"+totalExpense;
+
+document.getElementById("accountPaid").innerText = "₹"+totalPaid;
+document.getElementById("accountPending").innerText = "₹"+pending;
+document.getElementById("accountExpense").innerText = "₹"+totalExpense;
+document.getElementById("netAmount").innerText = "₹"+(totalPaid-totalExpense);
+
+document.getElementById("bookingList").innerHTML = bookings.map(b => `
+<div class="card">
+<b>${b.customer || ""}</b>
+<p>${b.event || ""} - ${b.date || ""}</p>
+<p>मोबाईल: ${b.phone || ""}</p>
+<p>एकूण: ₹${b.total || 0} | जमा: ₹${b.paid || 0}</p>
+<p>बाकी: ₹${Number(b.total||0)-Number(b.paid||0)}</p>
+<button onclick="editBooking('${b.id}')">Edit</button>
+<button onclick="printBill('${b.id}')">Bill / Print</button>
+<button onclick="deleteBooking('${b.id}')" style="background:#555">Delete</button>
+</div>
+`).join("") || "अजून बुकिंग नाही.";
+
+document.getElementById("expenseList").innerHTML = expenses.map(e => `
+<div class="card">
+${e.name || ""} - ₹${e.amount || 0}
+<p class="small">${e.date || ""}</p>
+<button onclick="deleteExpense('${e.id}')" style="background:#555">Delete</button>
+</div>
+`).join("") || "अजून खर्च नाही.";
+}
+
+window.editBooking = function(id) {
+const b = bookings.find(x => x.id === id);
+if(!b) return;
+
+editingId = id;
+customer.value = b.customer || "";
+phone.value = b.phone || "";
+event.value = b.event || "";
+date.value = b.date || "";
+location.value = b.location || "";
+details.value = b.details || "";
+total.value = b.total || "";
+paid.value = b.paid || "";
+showPage("booking");
+};
+
+window.deleteBooking = async function(id) {
+if(confirm("ही बुकिंग डिलीट करायची आहे का?")) {
+await deleteDoc(doc(db,"bookings",id));
+await loadData();
+}
+};
+
+window.saveExpense = async function() {
+if(!expenseName.value || !expenseAmount.value) {
+alert("खर्चाचे नाव आणि रक्कम भरा.");
+return;
+}
+
+await addDoc(collection(db,"expenses"), {
+name: expenseName.value,
+amount: Number(expenseAmount.value),
+date: expenseDate.value
+});
+
+expenseName.value = "";
+expenseAmount.value = "";
+expenseDate.value = "";
+await loadData();
+alert("खर्च सेव्ह झाला.");
+};
+
+window.deleteExpense = async function(id) {
+if(confirm("हा खर्च डिलीट करायचा आहे का?")) {
+await deleteDoc(doc(db,"expenses",id));
+await loadData();
+}
+};
+
+window.printBill = function(id) {
+const b = bookings.find(x => x.id === id);
+if(!b) return;
+
+const w = window.open("","_blank");
+w.document.write(`
+<html><head><title>Bill</title>
+<style>body{font-family:Arial;padding:25px}
+h2{text-align:center}hr{margin:20px 0}
+</style></head><body>
+<h2>श्री बालाजी डेकोरेशन</h2>
+<center>Decoration | Light Decoration | Catering</center>
+<hr>
+<h3>बुकिंग बिल</h3>
+<p>ग्राहकाचे नाव: ${b.customer}</p>
+<p>मोबाईल: ${b.phone}</p>
+<p>कार्यक्रम: ${b.event}</p>
+<p>दिनांक: ${b.date}</p>
+<p>ठिकाण: ${b.location}</p>
+<p>डेकोरेशन: ${b.details}</p>
+<hr>
+<p>एकूण रक्कम: ₹${b.total}</p>
+<p>जमा रक्कम: ₹${b.paid}</p>
+<h3>बाकी रक्कम: ₹${Number(b.total)-Number(b.paid)}</h3>
+<hr>
+<center>धन्यवाद!</center>
+<script>window.print();<\/script>
+</body></html>
+`);
+w.document.close();
+};
+
+</script>
+</body>
+</html>
